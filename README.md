@@ -1,5 +1,5 @@
 # RewardManagementUpgraded
- Reward Management System
+** Reward Management System **
 Description
 The Reward Management System is a Spring Boot-based application designed to manage and calculate customer rewards based on their transaction history. The application consists of multiple layers including controllers, services, repositories, and exception handling to offer a seamless user experience. It allows clients to query monthly reward points for a specific customer.
 
@@ -31,7 +31,7 @@ API Response Example (JSON):
 
 Sample Request and Response
 Sample Request:
-URL: /api/rewards/12345/January
+URL:http://localhost:8080/api/rewards/C12345/January
 Method: GET
 Sample Response (Success):
 json
@@ -106,7 +106,6 @@ Use Postman or any API testing tool to make GET requests to the endpoint:
 Replace {customerId} with the actual customer ID and {month} with the required month.
 Unit Testing
 The application includes unit tests to validate the functionality of the service layer and controller endpoints. It uses Mockito for mocking dependencies and JUnit for assertions.
-
 
 
 
