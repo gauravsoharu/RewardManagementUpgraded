@@ -5,6 +5,8 @@ import com.small.rewardmanagement.dto.RewardPointsSummaryDTO;
 import com.small.rewardmanagement.dto.TransactionDTO;
 import com.small.rewardmanagement.entity.Customer;
 import com.small.rewardmanagement.entity.Transaction;
+import com.small.rewardmanagement.exception.CustomerNotFoundException;
+import com.small.rewardmanagement.exception.RewardProcessingException;
 import com.small.rewardmanagement.repository.CustomerRepository;
 import com.small.rewardmanagement.repository.TransactionRepository;
 import com.small.rewardmanagement.utility.DateUtil;
@@ -17,21 +19,24 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class RewardService {
+
     private final TransactionRepository transactionRepository;
     private final CustomerRepository customerRepository;
 
     public CustomerRewardDTO getMonthlyRewards(String customerId, String month) {
-
         Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new IllegalArgumentException("Customer not found: " + customerId));
+                .orElseThrow(() -> new CustomerNotFoundException("Customer not found: " + customerId));
 
+        DateUtil.DateRange dateRange = DateUtil.getDateRangeForMonth(month);
 
-        var dateRange = DateUtil.getDateRangeForMonth(month);
-
-
-        List<Transaction> transactions = transactionRepository.findByCustomerCustomerIdAndTransactionDateBetween(
-                customerId, dateRange.startDate(), dateRange.endDate()
-        );
+        List<Transaction> transactions;
+        try {
+            transactions = transactionRepository.findByCustomerCustomerIdAndTransactionDateBetween(
+                    customerId, dateRange.startDate(), dateRange.endDate()
+            );
+        } catch (Exception e) {
+            throw new RewardProcessingException("Failed to fetch transactions for customer ID: " + customerId);
+        }
 
         List<RewardPointsSummaryDTO> rewardPointsSummary = transactions.stream()
                 .collect(Collectors.groupingBy(t -> t.getTransactionDate().getMonthValue()))
@@ -45,7 +50,6 @@ public class RewardService {
                     dto.setTransactions(entry.getValue().stream().map(this::mapToTransactionDTO).toList());
                     return dto;
                 }).toList();
-
 
         CustomerRewardDTO customerRewardDTO = new CustomerRewardDTO();
         customerRewardDTO.setCustomerId(customer.getCustomerId());

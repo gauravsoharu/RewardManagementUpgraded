@@ -1,82 +1,93 @@
 package com.small.rewardmanagement.service;
 
 import com.small.rewardmanagement.dto.CustomerRewardDTO;
+import com.small.rewardmanagement.dto.RewardPointsSummaryDTO;
 import com.small.rewardmanagement.entity.Customer;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import java.util.Collections;
-import java.util.Optional;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import com.small.rewardmanagement.entity.Transaction;
 import com.small.rewardmanagement.repository.CustomerRepository;
 import com.small.rewardmanagement.repository.TransactionRepository;
+import com.small.rewardmanagement.utility.DateUtil;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
 
-@SpringBootTest
-@ExtendWith(SpringExtension.class)
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.List;
 
+import static org.mockito.Mockito.*;
+import static org.junit.Assert.*;
+
+@RunWith(MockitoJUnitRunner.class)
 public class RewardServiceTest {
 
     @InjectMocks
     private RewardService rewardService;
 
     @Mock
-    private CustomerRepository customerRepository;
-
-    @Mock
     private TransactionRepository transactionRepository;
 
-    @BeforeEach
+    @Mock
+    private CustomerRepository customerRepository;
+
+    private Customer customer;
+    private List<Transaction> transactions;
+
+    @Before
     public void setUp() {
-        Mockito.when(customerRepository.findById(anyString())).thenReturn(Optional.empty());
-        Mockito.when(transactionRepository.findByCustomerCustomerIdAndTransactionDateBetween(anyString(), any(), any())).thenReturn(Collections.emptyList());
+        customer = new Customer();
+        customer.setCustomerId("12345");
+        customer.setCustomerName("John Doe");
+
+        Transaction transaction1 = new Transaction();
+        transaction1.setTransactionId(1L);
+        transaction1.setTransactionDate(LocalDate.of(2025, 1, 5));
+        transaction1.setPointsEarned(100);
+        transaction1.setTransactionAmount(500.0);  // Changed to double
+        transaction1.setTransactionDescription("Purchase 1");
+
+        Transaction transaction2 = new Transaction();
+        transaction2.setTransactionId(2L);  // Changed to long
+        transaction2.setTransactionDate(LocalDate.of(2025, 1, 15));
+        transaction2.setPointsEarned(150);
+        transaction2.setTransactionAmount(800.0);  // Changed to double
+        transaction2.setTransactionDescription("Purchase 2");
+
+        transactions = Arrays.asList(transaction1, transaction2);
     }
 
     @Test
-    public void testInjections() {
-        assertNotNull(customerRepository);
-        assertNotNull(transactionRepository);
-        assertNotNull(rewardService);
-    }
+    public void testGetMonthlyRewards() {
 
-    @Test
-    public void testGetMonthlyRewards_CustomerNotFound() {
-        String customerId = "invalidCustomerId";
+        String customerId = "12345";
         String month = "January";
 
-        assertThrows(IllegalArgumentException.class, () -> rewardService.getMonthlyRewards(customerId, month));
+        when(customerRepository.findById(customerId)).thenReturn(java.util.Optional.of(customer));
+        when(transactionRepository.findByCustomerCustomerIdAndTransactionDateBetween(
+                customerId,
+                DateUtil.getDateRangeForMonth(month).startDate(),
+                DateUtil.getDateRangeForMonth(month).endDate()
+        )).thenReturn(transactions);
+
+
+        CustomerRewardDTO result = rewardService.getMonthlyRewards(customerId, month);
+
+
+        assertNotNull(result);
+        assertEquals("12345", result.getCustomerId());
+        assertEquals("John Doe", result.getCustomerName());
+        assertEquals(1, result.getRewardPointsSummary().size()); // One month summary should be there
+        RewardPointsSummaryDTO summary = result.getRewardPointsSummary().get(0);
+        assertEquals("january", summary.getMonth().toLowerCase());
+        assertEquals(2, summary.getTransactions().size()); // Two transactions should be there
+        assertEquals(Long.valueOf(1L), summary.getTransactions().get(0).getTransactionId());
+        assertEquals(Long.valueOf(2L), summary.getTransactions().get(1).getTransactionId());
+
+
+        assertEquals(500.0, summary.getTransactions().get(0).getTransactionAmount(), 0.001);
+        assertEquals(800.0, summary.getTransactions().get(1).getTransactionAmount(), 0.001);
     }
-
-    @Test
-    public void testGetMonthlyRewards_InvalidMonth() {
-        String customerId = "customer";
-        String invalidMonth = "InvalidMonth";
-
-        Customer customer = new Customer(customerId, "John Doe");
-        Mockito.when(customerRepository.findById(customerId)).thenReturn(Optional.of(customer));
-
-        assertThrows(IllegalArgumentException.class, () -> rewardService.getMonthlyRewards(customerId, invalidMonth));
-    }
-
-    @Test
-    public void testGetMonthlyRewards_NoTransactions() {
-        String customerId = "customer";
-        String month = "January";
-
-        Customer customer = new Customer(customerId, "John Doe");
-        Mockito.when(customerRepository.findById(customerId)).thenReturn(Optional.of(customer));
-
-        CustomerRewardDTO rewardDTO = rewardService.getMonthlyRewards(customerId, month);
-
-        assertEquals(customerId, rewardDTO.getCustomerId());
-        assertEquals(customer.getCustomerName(), rewardDTO.getCustomerName());
-        assertEquals(Collections.emptyList(), rewardDTO.getRewardPointsSummary());
-    }
-
 }
