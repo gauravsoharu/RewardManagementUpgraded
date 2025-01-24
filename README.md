@@ -40,7 +40,7 @@ The GlobalExceptionHandler handles exceptions globally and returns appropriate H
 ### Method: GET
 
 ## Sample Response (Success):
-![Screenshot of the application interface](RewardManagementUpgraded/images/response.png)
+![Screenshot of the application interface](images/response.png)
 json
 Copy
 Edit
